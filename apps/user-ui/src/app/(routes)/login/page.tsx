@@ -1,5 +1,7 @@
 "use client";
 
+import { useMutation } from '@tanstack/react-query';
+import axios, { AxiosError } from 'axios';
 import { Eye, EyeOff, ScanFace } from 'lucide-react';
 //import GoogleButton from '@/shared/components/google-button';
 import Link from 'next/link';
@@ -24,8 +26,27 @@ const Login = () => {
         formState: {errors}
     } = useForm<FormData>();
 
-    const onSubmit = (data:FormData) => {
+    const loginMutation = useMutation({
+        mutationFn: async(data:FormData) => {
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URI}/api/login-user`,
+                data,
+                {withCredentials: true}
+            )
+            return response.data
+        },
+        onSuccess: (data) => {
+            setServerError(null)
+            router.push("/")
+        },
+        onError: (error: AxiosError) =>{
+            console.log("cannt login")
+            const errorMessage = (error.response?.data as {message?: string})?.message || "Invalid Credentials!"
+            setServerError(errorMessage)
+        }
+    })
 
+    const onSubmit = (data:FormData) => {
+        loginMutation.mutate(data)
     }
 
   return (
@@ -114,15 +135,16 @@ const Login = () => {
                             />
                             Remember Me
                         </label>
-                        <Link href={"/forget-password"}
+                        <Link href={"/forgot-password"}
                         className='text-sm text-blue-500'>
                             Forgot Password?
                         </Link>
                     </div>
                     <button 
                     type="submit" 
+                    disabled={loginMutation.isPending}
                     className='w-full p-2 mb-1 text-white bg-black border border-gray-300 rounded-sm outline-0'>
-                        Login
+                        {loginMutation.isPending ? "Loggin in" : "Login"}
                     </button>
                     {serverError && (
                         <p className='mt-2 text-sm text-red-500'>{serverError}</p>

@@ -3,12 +3,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff, ScanFace } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import React, { use, useRef, useState } from 'react';
 import {useForm} from "react-hook-form";
 import axios, { AxiosError } from "axios";
 import { response } from 'express';
 import { countries } from '@/utils/countries';
+import CreateShop from '@/shared/modules/auth/create-shop';
 
 // type FormData = {
 //     name: string;
@@ -24,10 +24,12 @@ const Signup = () => {
     const [timer, setTimer] = useState(60)
     const [showOtp, setShowOtp] = useState(false)
     const [otp, setOtp] = useState(["", "", "", ""])
-    const [userData, setUserData] = useState<FormData | null>(null)
+    const [sellerData, setSellerData] = useState<FormData | null>(null)
+    const [sellerId, setSellerId] = useState("")
+    
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-    const router = useRouter();
+  
 
     const {
         register,
@@ -51,13 +53,13 @@ const Signup = () => {
     const signUpMutation = useMutation({
         mutationFn: async(data:FormData) => {
             const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_SERVER_URI}/api/user-registration`,
+                `${process.env.NEXT_PUBLIC_SERVER_URI}/api/seller-registration`,
                  data
             )
             return response.data
         },
         onSuccess: (_, formData) => {
-            setUserData(formData)
+            setSellerData(formData)
             setShowOtp(true)
             setCanResend(false)
             setTimer(60)
@@ -67,16 +69,17 @@ const Signup = () => {
 
     const verifyOtpMutation = useMutation({
         mutationFn: async () => {
-            if(!userData) return
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URI}/api/verify-user`,{
-                ...userData,
+            if(!sellerData) return
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URI}/api/verify-seller`,{
+                ...sellerData,
                 otp: otp.join("")
             })
            return response.data     
             
         },
-        onSuccess: () => {
-            router.push("/login")
+        onSuccess: (data) => {
+            setSellerId(data?.seller?.id)
+            setActiveStep(2)
         }
     })
 
@@ -104,8 +107,22 @@ const Signup = () => {
     }
 
     const resendOtp = () => {
-        if(userData){
-            signUpMutation.mutate(userData)
+        if(sellerData){
+            signUpMutation.mutate(sellerData)
+        }
+    }
+
+    const connectStripe = async () => {
+        try {
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URI}/api/create-stripe-link`,
+                {sellerId}
+            )
+
+            if(response.data.url){
+                window.location.href = response.data.url
+            }
+        } catch (error) {
+            console.error("Stripe Connection Error:", error)
         }
     }
 
@@ -319,6 +336,25 @@ const Signup = () => {
                }
                     </>
                 )}
+                {
+                    activeStep === 2 && (
+                         <CreateShop sellerId={sellerId} setActiveStep={setActiveStep}/>
+                    )
+                }
+                {
+                    activeStep === 3 && (
+                         <div className='text-center'>
+                            <h3 className='text-2xl font-semibold'>Withdraw Method</h3>
+                            <br/>
+                            <button
+                                className='flex items-center justify-center w-full gap-3 py-2 m-auto text-xl text-white bg-gray-700 rounded-lg'
+                                onClick={connectStripe}
+                            >
+                                Connect Stripe
+                            </button>
+                         </div>   
+                    )
+                }
             </div>
 
        

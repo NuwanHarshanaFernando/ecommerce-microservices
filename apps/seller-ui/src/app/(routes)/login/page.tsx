@@ -28,7 +28,7 @@ const Login = () => {
 
     const loginMutation = useMutation({
         mutationFn: async(data:FormData) => {
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URI}/api/login-user`,
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URI}/api/login-seller`,
                 data,
                 {withCredentials: true}
             )
@@ -143,7 +143,7 @@ const Login = () => {
                     type="submit" 
                     disabled={loginMutation.isPending}
                     className='w-full p-2 mb-1 text-white bg-black border border-gray-300 rounded-sm outline-0'>
-                        {loginMutation.isPending ? "Loggin in" : "Login"}
+                        {loginMutation.isPending ? "Login in" : "Login"}
                     </button>
                     {serverError && (
                         <p className='mt-2 text-sm text-red-500'>{serverError}</p>
